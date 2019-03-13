@@ -58,14 +58,14 @@ theme_map <- function(...) {
 ########################################
 ## LOAD DATA
 ########################################
-mon <- readOGR("gis/mon_nf")
+unit <- readOGR("../fs_admin/data/shawnee_nf")
 
 
 county <- readOGR("gis/cb_2017_us_county_5m")
-county <- spTransform(county, CRS = proj4string(mon))
+county <- spTransform(county, CRS = proj4string(unit))
 
 states <- readOGR("gis/states")
-states <- spTransform(states, CRS = proj4string(mon))
+states <- spTransform(states, CRS = proj4string(unit))
 
 
 #----------------------------------------------------------------------------
@@ -78,20 +78,20 @@ states <- spTransform(states, CRS = proj4string(mon))
 # plot(state_county)
 # saveRDS(state_county, file="data/state_county")
 
-mon_buffer <- gBuffer(mon, width = 100000)
+unit_buffer <- gBuffer(unit, width = 200000)
 
 
-mon_counties <- raster::intersect(mon_buffer, county)
-plot(mon_counties)  
+unit_counties <- raster::intersect(unit_buffer, county)
+plot(unit_counties)  
 
-mon_geoid <- mon_counties@data %>% 
+unit_geoid <- unit_counties@data %>% 
   dplyr::select(GEOID) %>%
   mutate(GEOID = as.character(GEOID)) %>% 
   distinct() %>% 
   pull(GEOID)
 
-county_mon <- county  
-county_mon <- county_mon[county_mon@data$GEOID %in% mon_geoid, ]
+county_unit <- county  
+county_unit <- county_unit[county_unit@data$GEOID %in% unit_geoid, ]
 
 
 #----------------------------------------------------------------------------
@@ -101,8 +101,8 @@ county_mon <- county_mon[county_mon@data$GEOID %in% mon_geoid, ]
 ########################################
 
 states_latlong <- spTransform(states, CRS("+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs"))
-mon_latlong <- spTransform(mon, CRS("+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs"))
-mon_county_latlong <- spTransform(county_mon, CRS("+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs"))
+unit_latlong <- spTransform(unit, CRS("+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs"))
+unit_county_latlong <- spTransform(county_unit, CRS("+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs"))
 
 
 
@@ -113,7 +113,7 @@ mon_county_latlong <- spTransform(county_mon, CRS("+proj=longlat +ellps=GRS80 +t
 # 
 
 # subset states
-state_fips <- mon_county_latlong@data %>% 
+state_fips <- unit_county_latlong@data %>% 
   dplyr::select(STATEFP) %>% 
   mutate_if(is.factor, as.character) %>% 
   distinct() %>% 
@@ -126,8 +126,8 @@ states_sub_latlong <- states_latlong[states_latlong@data$STATEFP %in% state_fips
 
 state_df <- broom::tidy(states_latlong)
 state_sub_df <- broom::tidy(states_sub_latlong)
-buffer_df <- broom::tidy(mon_county_latlong)
-mon_df <- broom::tidy(mon_latlong)
+buffer_df <- broom::tidy(unit_county_latlong)
+unit_df <- broom::tidy(unit_latlong)
 
 
 # airshed map
@@ -142,12 +142,12 @@ ggplot(state_sub_df, aes(long, lat, group = group)) +
   geom_polygon(aes(long, lat, group = group, fill = "darkgreen"),
                color = NA,
                show.legend = TRUE,
-               data = mon_df) +
+               data = unit_df) +
   scale_color_manual(values = c("cadetblue3"), 
-                     labels = c("100km buffer"),
+                     labels = c("200km buffer"),
                      name = NULL) +
   scale_fill_manual(values = c("darkgreen"), 
-                    labels = c("Monongahela NF"),
+                    labels = c("Shawnee NF"),
                     name = NULL) +
   theme_minimal() +
   coord_map() +
@@ -165,7 +165,7 @@ ggplot(state_sub_df, aes(long, lat, group = group)) +
                                                              fill = NA)))
 
 
-ggsave(filename = "figures/mon_nf_buffer_map.jpg", 
+ggsave(filename = "figures/shawnee_nf_buffer_map.jpg", 
        height = 3, 
        width = 4.2, 
        units = "in")
@@ -183,12 +183,12 @@ fips <- fips_codes %>%
   distinct()
 
 # buffer
-county_df <- county_mon@data %>% 
+county_df <- county_unit@data %>% 
   mutate_if(is.factor, as.character) %>% 
   dplyr::select(state_code = STATEFP, County = NAME) %>% 
   left_join(., fips, by = "state_code") %>% 
   dplyr::select(-state_code)
-county_airshed_sf <- sf::st_as_sf(county_mon)
+county_airshed_sf <- sf::st_as_sf(county_unit)
 
 
 # nei data by year
@@ -284,18 +284,18 @@ nei_change <- nei_summ_county %>%
   spread(Pollutant, delta_11_14) %>% 
   rename(NAME = County, STATEFP = state_code)
 
-mon_county_delta <- county_mon 
-mon_county_delta@data <- left_join(mon_county_delta@data, nei_change, by = c("NAME", "STATEFP"))
-mon_county_delta_sf <-  sf::st_as_sf(mon_county_delta)
+unit_county_delta <- county_unit 
+unit_county_delta@data <- left_join(unit_county_delta@data, nei_change, by = c("NAME", "STATEFP"))
+unit_county_delta_sf <-  sf::st_as_sf(unit_county_delta)
 
 
-mon_states_sf <- sf::st_as_sf(states_sub_latlong)
+unit_states_sf <- sf::st_as_sf(states_sub_latlong)
 
 
 
 
 #nox
-ggplot(mon_county_delta_sf, aes(nox)) +
+ggplot(unit_county_delta_sf, aes(nox)) +
   geom_histogram()
 
 # plotting info for all time periods
@@ -305,20 +305,20 @@ pretty_quants <- c(-45000, -1000, -500, 0, 500, 1000, 10300)
 labels_scale <- c(">1000", "1000", "500", "0",  "-500","-1000")
 # here I actually create a new 
 # variable on the dataset with the quantiles
-mon_county_delta_sf$nox_quantiles <- cut(mon_county_delta_sf$nox, 
+unit_county_delta_sf$nox_quantiles <- cut(unit_county_delta_sf$nox, 
                                         breaks = pretty_quants, 
                                         labels = rev(labels_scale), 
                                         include.lowest = T)
-mon_county_delta_sf$nox_quantiles <- factor(mon_county_delta_sf$nox_quantiles, levels = levels(mon_county_delta_sf$nox_quantiles))
+unit_county_delta_sf$nox_quantiles <- factor(unit_county_delta_sf$nox_quantiles, levels = levels(unit_county_delta_sf$nox_quantiles))
 
-brks_scale <- levels(mon_county_delta_sf$nox_quantiles)
+brks_scale <- levels(unit_county_delta_sf$nox_quantiles)
 
 col_pal <- brewer_pal(palette = "RdYlBu")(6)
 
 nox_plot <- ggplot() +
-  geom_sf( fill = NA, color = "grey20", data = mon_states_sf) +
+  geom_sf( fill = NA, color = "grey20", data = unit_states_sf) +
   geom_sf( fill = NA, color = "grey20", data = county_airshed_sf) +
-  geom_sf(aes(fill = nox_quantiles), data = mon_county_delta_sf) +
+  geom_sf(aes(fill = nox_quantiles), data = unit_county_delta_sf) +
   theme_map() +
   theme(legend.position = "bottom",
         plot.margin = unit(c(0.2,.2,.2,.2), "cm"),
@@ -387,20 +387,20 @@ nox_plot <- ggplot() +
 # 
 # 
 # 
-# jpeg("figures/mon_nf_nox_change_11_14.jpg", height = 3, width = 4.2, units  = "in", res = 300)
+# jpeg("figures/unit_nf_nox_change_11_14.jpg", height = 3, width = 4.2, units  = "in", res = 300)
 # 
 # add_min_legend(nox_plot)
 # 
 # dev.off()
 
-ggsave(filename = "figures/mon_nf_nox_change.jpg",
+ggsave(filename = "figures/shawnee_nf_nox_change.jpg",
        plot = nox_plot,
        height = 3,
        width = 4.2,
        units = "in")
 
 #so2
-ggplot(mon_county_delta_sf, aes(so2)) +
+ggplot(unit_county_delta_sf, aes(so2)) +
   geom_histogram()
 
 # plotting info for all time periods
@@ -410,13 +410,13 @@ pretty_quants <- c(-45000, -1000, -500, 0, 500, 1000, 10300)
 labels_scale <- c(">1000", "1000", "500", "0",  "-500","-1000")
 # here I actually create a new 
 # variable on the dataset with the quantiles
-mon_county_delta_sf$so2_quantiles <- cut(mon_county_delta_sf$so2, 
+unit_county_delta_sf$so2_quantiles <- cut(unit_county_delta_sf$so2, 
                                         breaks = pretty_quants, 
                                         labels = rev(labels_scale), 
                                         include.lowest = T)
-mon_county_delta_sf$so2_quantiles <- factor(mon_county_delta_sf$so2_quantiles, levels = levels(mon_county_delta_sf$so2_quantiles))
+unit_county_delta_sf$so2_quantiles <- factor(unit_county_delta_sf$so2_quantiles, levels = levels(unit_county_delta_sf$so2_quantiles))
 
-brks_scale <- levels(mon_county_delta_sf$so2_quantiles)
+brks_scale <- levels(unit_county_delta_sf$so2_quantiles)
 
 
 col_pal <- brewer_pal(palette = "RdYlBu")(6)
@@ -424,9 +424,9 @@ col_pal <- brewer_pal(palette = "RdYlBu")(6)
 
 
 so2_plot <- ggplot() +
-  geom_sf( fill = NA, color = "grey20", data = mon_states_sf) +
+  geom_sf( fill = NA, color = "grey20", data = unit_states_sf) +
   geom_sf( fill = NA, color = "grey20", data = county_airshed_sf) +
-  geom_sf(aes(fill = so2_quantiles), data = mon_county_delta_sf) +
+  geom_sf(aes(fill = so2_quantiles), data = unit_county_delta_sf) +
   theme_map() +
   theme(legend.position = "bottom",
         plot.margin = unit(c(0.2,.2,.2,.2), "cm"),
@@ -470,7 +470,7 @@ so2_plot <- ggplot() +
 # 
 # dev.off()
 
-ggsave(filename = "figures/mon_nf_so2_change.jpg",
+ggsave(filename = "figures/shawnee_nf_so2_change.jpg",
        plot = so2_plot,
        height = 3,
        width = 4.2,
@@ -478,7 +478,7 @@ ggsave(filename = "figures/mon_nf_so2_change.jpg",
 
 
 # #pm10
-# ggplot(mon_county_delta_sf, aes(pm10)) +
+# ggplot(unit_county_delta_sf, aes(pm10)) +
 #   geom_histogram()
 # 
 # # plotting info for all time periods
@@ -488,13 +488,13 @@ ggsave(filename = "figures/mon_nf_so2_change.jpg",
 # labels_scale <- c(">1000", "1000", "500", "0",  "-500","-1000")
 # # here I actually create a new 
 # # variable on the dataset with the quantiles
-# mon_county_delta_sf$pm10_quantiles <- cut(mon_county_delta_sf$pm10, 
+# unit_county_delta_sf$pm10_quantiles <- cut(unit_county_delta_sf$pm10, 
 #                                            breaks = pretty_quants, 
 #                                            labels = rev(labels_scale), 
 #                                            include.lowest = T)
-# mon_county_delta_sf$pm10_quantiles <- factor(mon_county_delta_sf$pm10_quantiles, levels = levels(mon_county_delta_sf$pm10_quantiles))
+# unit_county_delta_sf$pm10_quantiles <- factor(unit_county_delta_sf$pm10_quantiles, levels = levels(unit_county_delta_sf$pm10_quantiles))
 # 
-# brks_scale <- levels(mon_county_delta_sf$pm10_quantiles)
+# brks_scale <- levels(unit_county_delta_sf$pm10_quantiles)
 # 
 # 
 # col_pal <- brewer_pal(palette = "RdYlBu")(6)
@@ -502,9 +502,9 @@ ggsave(filename = "figures/mon_nf_so2_change.jpg",
 # 
 # 
 # pm10_plot <- ggplot() +
-#   geom_sf( fill = NA, color = "grey20", data = mon_states_sf) +
+#   geom_sf( fill = NA, color = "grey20", data = unit_states_sf) +
 #   geom_sf( fill = NA, color = "grey20", data = county_airshed_sf) +
-#   geom_sf(aes(fill = pm10_quantiles), data = mon_county_delta_sf) +
+#   geom_sf(aes(fill = pm10_quantiles), data = unit_county_delta_sf) +
 #   theme_map() +
 #   theme(legend.position = "bottom",
 #         plot.margin = unit(c(0.2,.2,.2,.2), "cm"),
@@ -550,7 +550,7 @@ ggsave(filename = "figures/mon_nf_so2_change.jpg",
 
 
 #pm2.5
-ggplot(mon_county_delta_sf, aes(pm2_5)) +
+ggplot(unit_county_delta_sf, aes(pm2_5)) +
   geom_histogram()
 
 # plotting info for all time periods
@@ -560,13 +560,13 @@ pretty_quants <- c(-45000, -1000, -500, 0, 500, 1000, 10300)
 labels_scale <- c(">1000", "1000", "500", "0",  "-500","-1000")
 # here I actually create a new 
 # variable on the dataset with the quantiles
-mon_county_delta_sf$pm2_5_quantiles <- cut(mon_county_delta_sf$pm2_5, 
+unit_county_delta_sf$pm2_5_quantiles <- cut(unit_county_delta_sf$pm2_5, 
                                             breaks = pretty_quants, 
                                             labels = rev(labels_scale), 
                                             include.lowest = T)
-mon_county_delta_sf$pm2_5_quantiles <- factor(mon_county_delta_sf$pm2_5_quantiles, levels = levels(mon_county_delta_sf$pm2_5_quantiles))
+unit_county_delta_sf$pm2_5_quantiles <- factor(unit_county_delta_sf$pm2_5_quantiles, levels = levels(unit_county_delta_sf$pm2_5_quantiles))
 
-brks_scale <- levels(mon_county_delta_sf$pm2_5_quantiles)
+brks_scale <- levels(unit_county_delta_sf$pm2_5_quantiles)
 
 
 col_pal <- brewer_pal(palette = "RdYlBu")(6)
@@ -574,9 +574,9 @@ col_pal <- brewer_pal(palette = "RdYlBu")(6)
 
 
 pm2_5_plot <- ggplot() +
-  geom_sf( fill = NA, color = "grey20", data = mon_states_sf) +
+  geom_sf( fill = NA, color = "grey20", data = unit_states_sf) +
   geom_sf( fill = NA, color = "grey20", data = county_airshed_sf) +
-  geom_sf(aes(fill = pm2_5_quantiles), data = mon_county_delta_sf) +
+  geom_sf(aes(fill = pm2_5_quantiles), data = unit_county_delta_sf) +
   theme_map() +
   theme(legend.position = "bottom",
         plot.margin = unit(c(0.2,.2,.2,.2), "cm"),
@@ -620,7 +620,7 @@ pm2_5_plot <- ggplot() +
 # 
 # dev.off()
 
-ggsave(filename = "figures/mon_nf_pm_2_5_change.jpg",
+ggsave(filename = "figures/shawnee_nf_pm_2_5_change.jpg",
        plot = pm2_5_plot,
        height = 3,
        width = 4.2,
@@ -645,9 +645,9 @@ nei_change <- nei_summ_county %>%
   
   
 # join to make sf  
-mon_county_delta <- county_mon 
-mon_county_delta@data <- left_join(mon_county_delta@data, nei_change, by = c("NAME", "STATEFP"))
-mon_county_delta_sf <-  sf::st_as_sf(mon_county_delta)
+unit_county_delta <- county_unit 
+unit_county_delta@data <- left_join(unit_county_delta@data, nei_change, by = c("NAME", "STATEFP"))
+unit_county_delta_sf <-  sf::st_as_sf(unit_county_delta)
 
   
 # plotting info for all time periods
@@ -657,36 +657,36 @@ labels_scale <- c(">1000", "1000", "500", "0",  "-500","-1000")
 
 
 # gather pollutants and filter out PM10
-mon_county_delta_sf <- mon_county_delta_sf %>% 
+unit_county_delta_sf <- unit_county_delta_sf %>% 
   gather(pollutant, emissions, nox:so2) %>% 
   filter(pollutant != "pm10")
 
 
 # here I actually create a new 
 # variable on the dataset with the quantiles
-mon_county_delta_sf$emissions_quantiles <- cut(mon_county_delta_sf$emissions, 
+unit_county_delta_sf$emissions_quantiles <- cut(unit_county_delta_sf$emissions, 
                                          breaks = pretty_quants, 
                                          labels = rev(labels_scale), 
                                          include.lowest = T)
-mon_county_delta_sf$emissions_quantiles <- factor(mon_county_delta_sf$emissions_quantiles, levels = levels(mon_county_delta_sf$emissions_quantiles))
+unit_county_delta_sf$emissions_quantiles <- factor(unit_county_delta_sf$emissions_quantiles, levels = levels(unit_county_delta_sf$emissions_quantiles))
 
 
 # factor pollutants
-mon_county_delta_sf$pollutant <- factor(mon_county_delta_sf$pollutant,
+unit_county_delta_sf$pollutant <- factor(unit_county_delta_sf$pollutant,
                                         levels = c("nox", "so2", "pm2_5"),
                                         labels = c("NO[x]", "SO[2]", "PM[2.5]"))
 
 # plotting details
-brks_scale <- levels(mon_county_delta_sf$emissions_quantiles)
+brks_scale <- levels(unit_county_delta_sf$emissions_quantiles)
 col_pal <- brewer_pal(palette = "RdYlBu")(6)
-mon_states_sf <- sf::st_as_sf(states_sub_latlong)
+unit_states_sf <- sf::st_as_sf(states_sub_latlong)
 
 
 # faceted plot___long
 ggplot() +
-  geom_sf( fill = NA, color = "grey20", data = mon_states_sf) +
+  geom_sf( fill = NA, color = "grey20", data = unit_states_sf) +
   geom_sf( fill = NA, color = "grey20", data = county_airshed_sf) +
-  geom_sf(aes(fill = emissions_quantiles), data = mon_county_delta_sf) +
+  geom_sf(aes(fill = emissions_quantiles), data = unit_county_delta_sf) +
   theme_map() +
   facet_wrap(~pollutant, 
              ncol = 1,
@@ -727,16 +727,16 @@ ggplot() +
         strip.text.y = element_text(size = 12,  margin = margin( b = 0, t = 0), angle = 180),
         panel.spacing = unit(0.1, "lines"))
 
-ggsave(filename = "figures/mon_nf_nei_change_long.jpg",
+ggsave(filename = "figures/shawnee_nf_nei_change_long.jpg",
        height = 8,
        width = 3.7,
        units = "in")
 
 # faceted plot___wide
 ggplot() +
-  geom_sf( fill = NA, color = "grey20", data = mon_states_sf) +
+  geom_sf( fill = NA, color = "grey20", data = unit_states_sf) +
   geom_sf( fill = NA, color = "grey20", data = county_airshed_sf) +
-  geom_sf(aes(fill = emissions_quantiles), data = mon_county_delta_sf) +
+  geom_sf(aes(fill = emissions_quantiles), data = unit_county_delta_sf) +
   theme_map() +
   facet_wrap(~pollutant, 
              nrow = 1,
@@ -778,7 +778,7 @@ ggplot() +
         panel.grid.minor = element_line(color = "white"),
         strip.text = element_text(size = 12))
 
-ggsave(filename = "figures/mon_nf_nei_change.jpg",
+ggsave(filename = "figures/unit_nf_nei_change.jpg",
        height = 3.5,
        width = 7,
        units = "in")
