@@ -732,56 +732,6 @@ ggsave(filename = "figures/shawnee_nf_nei_change_long.jpg",
        width = 3.7,
        units = "in")
 
-# faceted plot___wide
-ggplot() +
-  geom_sf( fill = NA, color = "grey20", data = unit_states_sf) +
-  geom_sf( fill = NA, color = "grey20", data = county_airshed_sf) +
-  geom_sf(aes(fill = emissions_quantiles), data = unit_county_delta_sf) +
-  theme_map() +
-  facet_wrap(~pollutant, 
-             nrow = 1,
-             strip.position = "top",
-             labeller = label_parsed) +
-  theme(legend.position = "bottom") +
-        # plot.margin = unit(c(0.2,.2,.2,.2), "cm"),
-  #       panel.spacing = unit(c(-.1,0.2,.2,0.2), "cm"),
-  #       panel.border = element_blank()) +
-  labs(title = "Change in Emissions (2008-2014)") +
-  scale_fill_manual(
-    # in manual scales, one has to define colors, well, manually
-    # I can directly access them using viridis' magma-function
-    values = rev(col_pal),
-    breaks = rev(brks_scale),
-    name = "tons",
-    drop = FALSE,
-    labels = labels_scale,
-    guide = guide_legend(
-      direction = "horizontal",
-      keyheight = unit(4, units = "mm"),
-      keywidth = unit(20, units = "mm"),
-      title.position = 'left',
-      # I shift the labels around, the should be placed 
-      # exactly at the right end of each legend key
-      title.hjust = 0.5,
-      label.hjust = 1,
-      nrow = 1,
-      byrow = T,
-      # also the guide needs to be reversed
-      reverse = T,
-      label.position = "bottom"
-    )
-  ) +
-  theme(plot.title  = element_text(size = 12, face = "bold"),
-        legend.title = element_text(size = 12, vjust = 1),
-        legend.text = element_text(size = 10),
-        panel.grid.major = element_line(color = "white"),
-        panel.grid.minor = element_line(color = "white"),
-        strip.text = element_text(size = 12))
-
-ggsave(filename = "figures/unit_nf_nei_change.jpg",
-       height = 3.5,
-       width = 7,
-       units = "in")
 
 
 
@@ -811,7 +761,7 @@ nei_poll_county_sector <- nei_dat %>%
   
   
 write_csv(nei_poll_county_sector,
-          "data/nei_pollutant_sector.csv")
+          "data/shawnee_nei_pollutant_sector.csv")
 
 
 
