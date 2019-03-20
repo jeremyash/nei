@@ -147,7 +147,7 @@ ggplot(state_sub_df, aes(long, lat, group = group)) +
                      labels = c("200km buffer"),
                      name = NULL) +
   scale_fill_manual(values = c("darkgreen"), 
-                    labels = c("midewin"),
+                    labels = c("Midewin NTGP"),
                     name = NULL) +
   theme_minimal() +
   coord_map() +

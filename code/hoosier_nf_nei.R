@@ -147,7 +147,7 @@ ggplot(state_sub_df, aes(long, lat, group = group)) +
                      labels = c("200km buffer"),
                      name = NULL) +
   scale_fill_manual(values = c("darkgreen"), 
-                    labels = c("hoosier NF"),
+                    labels = c("Hoosier NF"),
                     name = NULL) +
   theme_minimal() +
   coord_map() +
